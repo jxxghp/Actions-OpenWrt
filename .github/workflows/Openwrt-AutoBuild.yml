@@ -10,11 +10,11 @@ name: Build OpenWrt-Nanopi-r2s
 
 on: 
   repository_dispatch:
-    push:
-      branches: 
-        - master
-      paths:
-        - '.github/workflows/Openwrt-AutoBuild.yml'
+  push:
+    branches: 
+      - master
+    paths:
+      - '.github/workflows/Openwrt-AutoBuild.yml'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
