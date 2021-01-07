@@ -10,6 +10,11 @@ name: Build OpenWrt
 
 on: 
   repository_dispatch:
+    push:
+    branches: 
+      - master
+    paths:
+      - '.github/workflows/Openwrt-AutoBuild.yml'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
@@ -25,11 +30,11 @@ jobs:
   build:
     runs-on: Ubuntu-20.04
     
-    name: Build ${{matrix.target}}
+    name: Build nanopi-r2s
     strategy:
       fail-fast: false
       matrix:
-        target: ["${{ github.event.client_payload.target }}"]
+        target: ["nanopi-r2s"]
         
     steps:
     - name: Checkout
@@ -38,8 +43,8 @@ jobs:
     - name: Load Settings.ini
       run: |
         source "${GITHUB_WORKSPACE}/devices/common/settings.ini"
-        if [ -f "devices/${{matrix.target}}/settings.ini" ]; then
-          source "${GITHUB_WORKSPACE}/devices/${{matrix.target}}/settings.ini"
+        if [ -f "devices/nanopi-r2s/settings.ini" ]; then
+          source "${GITHUB_WORKSPACE}/devices/nanopi-r2s/settings.ini"
         fi
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
@@ -95,7 +100,7 @@ jobs:
     - name: Load && Update feeds
       run: |
         cp -rf devices/common/* openwrt/
-        cp -rf devices/${{matrix.target}}/* openwrt/
+        cp -rf devices/nanopi-r2s/* openwrt/
         cd openwrt
         ./scripts/feeds update -a
 
@@ -106,27 +111,27 @@ jobs:
         chmod +x devices/common/$DIY_SH
         /bin/bash "devices/common/$DIY_SH"
         cp -Rf ./diy/* ./
-        if [ -f "devices/${{matrix.target}}/$DIY_SH" ]; then
-          chmod +x devices/${{matrix.target}}/$DIY_SH
-          /bin/bash "devices/${{matrix.target}}/$DIY_SH"
+        if [ -f "devices/nanopi-r2s/$DIY_SH" ]; then
+          chmod +x devices/nanopi-r2s/$DIY_SH
+          /bin/bash "devices/nanopi-r2s/$DIY_SH"
         fi
         cp -f devices/common/default-settings package/*/*/default-settings/root/etc/uci-defaults/99-default-settings
-        if [ -f "devices/${{matrix.target}}/default-settings" ]; then
+        if [ -f "devices/nanopi-r2s/default-settings" ]; then
           echo >> package/*/*/default-settings/root/etc/uci-defaults/99-default-settings
-          cat devices/${{matrix.target}}/default-settings >> package/*/*/default-settings/root/etc/uci-defaults/99-default-settings
+          cat devices/nanopi-r2s/default-settings >> package/*/*/default-settings/root/etc/uci-defaults/99-default-settings
         fi
         mv devices/common/$CONFIG_FILE .config
-        if [ -f "devices/${{matrix.target}}/$CONFIG_FILE" ]; then
+        if [ -f "devices/nanopi-r2s/$CONFIG_FILE" ]; then
           echo >> .config
-          cat devices/${{matrix.target}}/$CONFIG_FILE >> .config
+          cat devices/nanopi-r2s/$CONFIG_FILE >> .config
         fi
 
     - name: Apply patches
       run: |
         cd openwrt
         find "devices/common/patches" -type f ! -path 'devices/common/patches/china_mirrors.patch' -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
-        if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
-          find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
+        if [ -n "$(ls -A "devices/nanopi-r2s/patches" 2>/dev/null)" ]; then
+          find "devices/nanopi-r2s/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         fi
         
     - name: Default PPPOE Setting
@@ -161,7 +166,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: env.UPLOAD_BIN_DIR_FOR_ARTIFACT == 'true'
       with:
-        name: OpenWrt_bin_${{matrix.target}}
+        name: OpenWrt_bin_nanopi-r2s
         path: openwrt/bin
 
     - name: Organize files
@@ -173,10 +178,10 @@ jobs:
         -or -name "*armvirt-64-default-rootfs*" \
         -or -name "sha256sums" \
         | xargs -i mv -f {} ./firmware/
-        cp openwrt/.config  ./firmware/${{matrix.target}}.config
+        cp openwrt/.config  ./firmware/nanopi-r2s.config
         cd firmware
         echo ${{ env.date4 }} > version.txt
-        mv sha256sums ${{matrix.target}}_sha256sums
+        mv sha256sums nanopi-r2s_sha256sums
         rename -v "s/^openwrt/${{ env.date3 }}-openwrt/" *
         rename -v "s/xiaomi_redmi-router/redmi/" *bin
         rename -v "s/-d-team//" *bin
@@ -186,11 +191,6 @@ jobs:
         RANDOM=$$$(date +%s)
         rand=$[$RANDOM % ${#Emoji[@]}]
         echo "EMOJI=${Emoji[$rand]}" >> $GITHUB_ENV
-        if [ ${{matrix.target}} == "phicomm-k2p" ]; then
-        echo "NOTICE=刷机时breed里的闪存布局请选择斐讯而非默认的公版" >> $GITHUB_ENV
-        elif [ ${{matrix.target}} == "x86_64" ]; then
-        echo "NOTICE=请分配不少于800M的存储容量" >> $GITHUB_ENV
-        fi
 
     - name: Create release
       id: create_release
@@ -207,8 +207,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       with:
         files: "${{ env.FIRMWARE }}/*"
-        name: ${{ env.date2 }} ${{matrix.target}} ${{ env.EMOJI }}
-        tag_name: ${{ env.date }}_${{matrix.target}}
+        name: ${{ env.date2 }} nanopi-r2s ${{ env.EMOJI }}
+        tag_name: ${{ env.date }}_nanopi-r2s
         body_path: release.txt
 
     - name: Upload firmware for artifact
@@ -216,12 +216,12 @@ jobs:
       continue-on-error: true
       if: env.UPLOAD_FIRMWARE_FOR_ARTIFACT == 'true'
       with:
-        name: ${{ env.date3 }} ${{matrix.target}}
+        name: ${{ env.date3 }} nanopi-r2s
         path: ${{ env.FIRMWARE }}
         
     - name: WeChat notification
       continue-on-error: true
       if: env.SCKEY
       run: |
-        [ steps.compile.outputs.status == 'success' ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉OpenWrt_${{ env.date3 }}_${{matrix.target}}编译完成😋|| curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌OpenWrt_${{ env.date3 }}_${{matrix.target}}编译失败😂
+        [ steps.compile.outputs.status == 'success' ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉OpenWrt_${{ env.date3 }}_nanopi-r2s编译完成😋|| curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌OpenWrt_${{ env.date3 }}_nanopi-r2s编译失败😂
 
