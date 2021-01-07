@@ -11,10 +11,10 @@ name: Build OpenWrt-nanopi-r2s
 on: 
   repository_dispatch:
     push:
-    branches: 
-      - master
-    paths:
-      - '.github/workflows/Openwrt-AutoBuild.yml'
+      branches: 
+        - master
+      paths:
+        - '.github/workflows/Openwrt-AutoBuild.yml'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
