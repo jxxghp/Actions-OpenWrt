@@ -15,6 +15,7 @@ on:
       - master
     paths:
       - '.github/workflows/Openwrt-AutoBuild.yml'
+      - 'devices/nanopi-r2s/.config'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
